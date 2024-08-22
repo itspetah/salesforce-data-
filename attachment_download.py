@@ -5,6 +5,7 @@ import requests
 # Constants
 ATTACHMENT_CSV = 'attachment.csv'
 DOWNLOAD_FOLDER = 'attachments/'
+FILE_DOWNLOAD_URL_TEMPLATE = 'https://your-salesforce-instance.com/servlet/servlet.FileDownload?file='  # Replace with actual Salesforce URL template
 
 # Ensure the download folder exists
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
@@ -16,7 +17,7 @@ with open(ATTACHMENT_CSV, mode='r', newline='') as file:
     for row in reader:
         file_id = row['Id']
         file_name = row['Name']
-        file_url = row['Body']  # Assuming this is the URL/path to the file
+        file_url = FILE_DOWNLOAD_URL_TEMPLATE + file_id
 
         response = requests.get(file_url)
         
