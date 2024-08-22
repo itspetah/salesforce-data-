@@ -33,9 +33,7 @@ with open(ATTACHMENT_CSV, mode='r', newline='') as file:
             # Debugging output
             print(f"Downloading {file_name}, Content-Type from response: {response.headers.get('Content-Type')}")
 
-            if response.headers.get('Content-Type') != content_type:
-                print(f"Warning: The content type from response ({response.headers.get('Content-Type')}) does not match expected ContentType ({content_type}) from CSV.")
-
+            # Handle based on CSV ContentType
             if 'image' in content_type:
                 file_path = os.path.join(DOWNLOAD_FOLDER, file_name)
                 with open(file_path, 'wb') as f:
