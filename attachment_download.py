@@ -30,10 +30,12 @@ with open(ATTACHMENT_CSV, mode='r', newline='') as file:
             response = requests.get(file_url, headers=headers)
             response.raise_for_status()  # Raises an error for bad responses
 
-            # Debugging output
-            print(f"Downloading {file_name}, Content-Type from response: {response.headers.get('Content-Type')}")
+            # Print debugging info
+            print(f"Downloading {file_name}")
+            print(f"Content-Type from response: {response.headers.get('Content-Type')}")
+            print(f"Expected ContentType from CSV: {content_type}")
 
-            # Handle based on CSV ContentType
+            # Check if the file content matches the expected ContentType
             if 'image' in content_type:
                 file_path = os.path.join(DOWNLOAD_FOLDER, file_name)
                 with open(file_path, 'wb') as f:
