@@ -9,9 +9,8 @@ DOWNLOAD_FOLDER = 'attachments/'
 FILE_DOWNLOAD_URL_TEMPLATE = 'https://companyname.lightning.force.com/servlet/servlet.FileDownload?file='  # Your Salesforce domain
 
 # Optionally, include headers if authentication is needed
-# Replace <Your-Access-Token> with your actual Salesforce access token
 headers = {
-    'Authorization': 'Bearer <Your-Access-Token>'
+    'Authorization': 'Bearer <Your-Access-Token>'  # Use if required
 }
 
 # Ensure the download folder exists
@@ -30,12 +29,11 @@ with open(ATTACHMENT_CSV, mode='r', newline='') as file:
             response = requests.get(file_url, headers=headers)
             response.raise_for_status()  # Raises an error for bad responses
 
-            # Print content type for debugging
-            print(f"Downloading {file_name}, Content-Type: {response.headers.get('Content-Type')}")
+            content_type = response.headers.get('Content-Type')
+            print(f"Downloading {file_name}, Content-Type: {content_type}")
 
-            # Check if the response is HTML (indicating a potential problem)
-            if 'text/html' in response.headers.get('Content-Type', ''):
-                print(f"Warning: Received HTML content instead of the expected file for {file_name}.")
+            if 'image' not in content_type:
+                print(f"Warning: {file_name} is not an image file or the content type is incorrect.")
                 continue
 
             file_path = os.path.join(DOWNLOAD_FOLDER, file_name)
