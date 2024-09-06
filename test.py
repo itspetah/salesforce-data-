@@ -1,13 +1,15 @@
 import os
 import pandas as pd
 import requests
+from requests_oauthlib import OAuth2Session
 from simple_salesforce import Salesforce
 
 # Salesforce credentials
-USERNAME = 'your_username'
-PASSWORD = 'your_password'
-SECURITY_TOKEN = 'your_security_token'
-INSTANCE_URL = 'https://your_instance.salesforce.com'
+CONSUMER_KEY = 'your_consumer_key'
+CONSUMER_SECRET = 'your_consumer_secret'
+REDIRECT_URI = 'http://localhost:8888/callback'  # Adjusted to match Jupyter Lab port
+AUTH_URL = 'https://login.salesforce.com/services/oauth2/authorize'
+TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'
 
 # CSV file containing Salesforce File IDs
 CSV_FILE = 'file_ids.csv'
@@ -15,15 +17,30 @@ CSV_FILE = 'file_ids.csv'
 # Directory to save the downloaded files
 DOWNLOAD_DIR = 'downloaded_files'
 
-# Connect to Salesforce
-sf = Salesforce(username=USERNAME, password=PASSWORD, security_token=SECURITY_TOKEN, instance_url=INSTANCE_URL)
-
-# Read the CSV file
-df = pd.read_csv(CSV_FILE)
-
 # Ensure the download directory exists
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
+
+# Function to handle OAuth2 authorization
+def get_salesforce_token():
+    salesforce = OAuth2Session(CONSUMER_KEY, redirect_uri=REDIRECT_URI)
+    authorization_url, state = salesforce.authorization_url(AUTH_URL)
+    print('Please go to this URL and authorize access:', authorization_url)
+
+    # Get the authorization verifier code from the callback URL
+    redirect_response = input('Paste the full callback URL here: ')
+    salesforce.fetch_token(TOKEN_URL, authorization_response=redirect_response, client_secret=CONSUMER_SECRET)
+    
+    return salesforce.token
+
+# Get the OAuth token
+token = get_salesforce_token()
+
+# Create a session with the token
+sf = Salesforce(instance_url=token['instance_url'], session_id=token['access_token'])
+
+# Read the CSV file
+df = pd.read_csv(CSV_FILE)
 
 # Function to download a file
 def download_file(file_id, index):
@@ -46,7 +63,7 @@ def download_file(file_id, index):
         file_path = os.path.join(DOWNLOAD_DIR, file_name)
     
     # Download the file content
-    response = requests.get(f"{INSTANCE_URL}{file_data['VersionData']}", headers={"Authorization": f"Bearer {sf.session_id}"})
+    response = requests.get(f"{token['instance_url']}{file_data['VersionData']}", headers={"Authorization": f"Bearer {token['access_token']}"})
     
     if response.status_code == 200:
         with open(file_path, 'wb') as file:
