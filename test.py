@@ -1,33 +1,45 @@
-import csv
 import os
+import pandas as pd
+import shutil
 
-# Constants
-ATTACHMENT_CSV = 'attachment.csv'
-DOWNLOAD_FOLDER = 'attachments/'
+# Paths
+EXPORT_FOLDER = 'path_to_salesforce_export_folder'  # Folder where the export files are located
+CSV_FILE = 'file_ids.csv'  # Your CSV file containing File IDs
+OUTPUT_FOLDER = 'downloaded_files'  # Folder to save extracted files
 
-# Ensure the download folder exists
-os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+# Load CSV
+df = pd.read_csv(CSV_FILE)
 
-# Read the attachment.csv and save files based on ContentType
-with open(ATTACHMENT_CSV, mode='r', newline='') as file:
-    reader = csv.DictReader(file)
-    
-    for row in reader:
-        file_id = row['Id']
-        file_name = row['Name']
-        content_type = row['ContentType']  # Get ContentType from CSV
+# Ensure the output folder exists
+if not os.path.exists(OUTPUT_FOLDER):
+    os.makedirs(OUTPUT_FOLDER)
 
-        # Simulate file content retrieval (in a real scenario, retrieve content from Salesforce)
-        file_content = b''  # Replace with actual file content retrieval logic
+# Function to extract a file based on ID
+def extract_file(file_id, index):
+    file_found = False
+    for root, dirs, files in os.walk(EXPORT_FOLDER):
+        for file in files:
+            if file.startswith(file_id):
+                file_path = os.path.join(root, file)
+                # Handle duplicate names
+                dest_file_name = f"{file}"
+                dest_file_path = os.path.join(OUTPUT_FOLDER, dest_file_name)
+                if os.path.exists(dest_file_path):
+                    # Rename if already exists
+                    dest_file_name = f"{file_id}_{index}{os.path.splitext(file)[1]}"
+                    dest_file_path = os.path.join(OUTPUT_FOLDER, dest_file_name)
+                
+                shutil.copy(file_path, dest_file_path)
+                print(f"Extracted: {dest_file_name}")
+                file_found = True
+                break
+        if file_found:
+            break
+    if not file_found:
+        print(f"File with ID {file_id} not found in the export folder.")
 
-        # Print debugging info
-        print(f"Processing {file_name}")
-        print(f"Expected ContentType from CSV: {content_type}")
+# Loop through the file IDs and extract each file
+for index, row in df.iterrows():
+    extract_file(row['FileId'], index)
 
-        if 'image' in content_type:
-            file_path = os.path.join(DOWNLOAD_FOLDER, file_name)
-            with open(file_path, 'wb') as f:
-                f.write(file_content)
-            print(f"Saved: {file_name}")
-        else:
-            print(f"Skipped {file_name}, expected image file but got {content_type}")
+print("Extraction complete.")
