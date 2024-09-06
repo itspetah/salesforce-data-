@@ -1,45 +1,62 @@
 import os
 import pandas as pd
-import shutil
+import requests
+from simple_salesforce import Salesforce
 
-# Paths
-EXPORT_FOLDER = 'path_to_salesforce_export_folder'  # Folder where the export files are located
-CSV_FILE = 'file_ids.csv'  # Your CSV file containing File IDs
-OUTPUT_FOLDER = 'downloaded_files'  # Folder to save extracted files
+# Salesforce credentials
+USERNAME = 'your_username'
+PASSWORD = 'your_password'
+SECURITY_TOKEN = 'your_security_token'
+INSTANCE_URL = 'https://your_instance.salesforce.com'
 
-# Load CSV
+# CSV file containing Salesforce File IDs
+CSV_FILE = 'file_ids.csv'
+
+# Directory to save the downloaded files
+DOWNLOAD_DIR = 'downloaded_files'
+
+# Connect to Salesforce
+sf = Salesforce(username=USERNAME, password=PASSWORD, security_token=SECURITY_TOKEN, instance_url=INSTANCE_URL)
+
+# Read the CSV file
 df = pd.read_csv(CSV_FILE)
 
-# Ensure the output folder exists
-if not os.path.exists(OUTPUT_FOLDER):
-    os.makedirs(OUTPUT_FOLDER)
+# Ensure the download directory exists
+if not os.path.exists(DOWNLOAD_DIR):
+    os.makedirs(DOWNLOAD_DIR)
 
-# Function to extract a file based on ID
-def extract_file(file_id, index):
-    file_found = False
-    for root, dirs, files in os.walk(EXPORT_FOLDER):
-        for file in files:
-            if file.startswith(file_id):
-                file_path = os.path.join(root, file)
-                # Handle duplicate names
-                dest_file_name = f"{file}"
-                dest_file_path = os.path.join(OUTPUT_FOLDER, dest_file_name)
-                if os.path.exists(dest_file_path):
-                    # Rename if already exists
-                    dest_file_name = f"{file_id}_{index}{os.path.splitext(file)[1]}"
-                    dest_file_path = os.path.join(OUTPUT_FOLDER, dest_file_name)
-                
-                shutil.copy(file_path, dest_file_path)
-                print(f"Extracted: {dest_file_name}")
-                file_found = True
-                break
-        if file_found:
-            break
-    if not file_found:
-        print(f"File with ID {file_id} not found in the export folder.")
+# Function to download a file
+def download_file(file_id, index):
+    # Query the ContentVersion to get the file details
+    query = f"SELECT Title, FileExtension, VersionData FROM ContentVersion WHERE Id = '{file_id}'"
+    result = sf.query(query)
 
-# Loop through the file IDs and extract each file
+    if not result['records']:
+        print(f"No file found for File ID {file_id}")
+        return
+
+    file_data = result['records'][0]
+    file_name = f"{file_data['Title']}.{file_data['FileExtension']}"
+    
+    # Check if file name already exists
+    file_path = os.path.join(DOWNLOAD_DIR, file_name)
+    if os.path.exists(file_path):
+        # Rename the file if a file with the same name exists
+        file_name = f"{file_data['Title']}_{index}.{file_data['FileExtension']}"
+        file_path = os.path.join(DOWNLOAD_DIR, file_name)
+    
+    # Download the file content
+    response = requests.get(f"{INSTANCE_URL}{file_data['VersionData']}", headers={"Authorization": f"Bearer {sf.session_id}"})
+    
+    if response.status_code == 200:
+        with open(file_path, 'wb') as file:
+            file.write(response.content)
+        print(f"Downloaded: {file_name}")
+    else:
+        print(f"Failed to download file {file_id}")
+
+# Loop through the file IDs and download each file
 for index, row in df.iterrows():
-    extract_file(row['FileId'], index)
+    download_file(row['FileId'], index)
 
-print("Extraction complete.")
+print("Download complete.")
