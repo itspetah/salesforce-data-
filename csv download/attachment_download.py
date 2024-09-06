@@ -4,13 +4,14 @@ import requests
 from requests.exceptions import ConnectionError, HTTPError
 
 # Constants
-ATTACHMENT_CSV = 'attachment.csv'
+ATTACHMENT_CSV = 'Attachment.csv'
 DOWNLOAD_FOLDER = 'attachments/'
-FILE_DOWNLOAD_URL_TEMPLATE = 'https://companyname.lightning.force.com/servlet/servlet.FileDownload?file='  # Your Salesforce domain
+FILE_DOWNLOAD_URL_TEMPLATE = 'https://companyname.file.force.com/servlet/servlet.FileDownload?file='
+# /sfsites/c/sfc/servlet.shepherd/document/download/
 
-# Optionally, include headers if authentication is needed
+# Access token
 headers = {
-    'Authorization': 'Bearer <Your-Access-Token>'  # Use if required
+    'Authorization': 'Bearer <>'
 }
 
 # Ensure the download folder exists
@@ -23,18 +24,22 @@ with open(ATTACHMENT_CSV, mode='r', newline='') as file:
     for row in reader:
         file_id = row['Id']
         file_name = row['Name']
-        content_type = row['ContentType']  # Get ContentType from CSV
+        content_type = row['ContentType']
         file_url = FILE_DOWNLOAD_URL_TEMPLATE + file_id
 
         try:
             response = requests.get(file_url, headers=headers)
-            response.raise_for_status()  # Raises an error for bad responses
+            response.raise_for_status()
 
             # Print debugging info
             print(f"Downloading {file_name}")
             print(f"Content-Type from response: {response.headers.get('Content-Type')}")
             print(f"Expected ContentType from CSV: {content_type}")
-
+            
+            print(f"Final URL: {response.url}")
+            # check what is the response from api
+            print(response.text)
+            
             # Check if the file content matches the expected ContentType
             if 'image' in content_type:
                 file_path = os.path.join(DOWNLOAD_FOLDER, file_name)
