@@ -15,6 +15,9 @@ headers = {
     'Authorization': 'Bearer <>'
 }
 
+# Ensure the download folder exists
+os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+
 # Process each row in the Excel sheet
 for row in ws.iter_rows(min_row=2, values_only=True):  # Skip header row
     file_name, file_url = row
