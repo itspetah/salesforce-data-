@@ -1,34 +1,47 @@
 import pandas as pd
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from requests_html import HTMLSession
+import requests
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.edge.service import Service as EdgeService
+from selenium.webdriver.edge.options import Options
 
 def download_url(url):
+    # Using requests to download content (if it's a direct link to the file)
     try:
-        session = HTMLSession()
-        response = session.get(url)
-        response.html.render()  # This will render the JavaScript content
+        response = requests.get(url)
+        response.raise_for_status()
         
-        # Adjust the selector to match the download button in the Salesforce page
-        download_button = response.html.find('a.download-button-selector', first=True)
-        if download_button:
-            download_link = download_button.attrs['href']
-            download_response = session.get(download_link)
-            
-            filename = download_link.split("/")[-1]
-            with open(filename, 'wb') as file:
-                file.write(download_response.content)
-                
-            messagebox.showinfo("Success", f"Downloaded: {filename}")
-        else:
-            messagebox.showerror("Error", "Download button not found.")
+        filename = url.split("/")[-1]
+        with open(filename, 'wb') as file:
+            file.write(response.content)
+        
+        messagebox.showinfo("Success", f"Downloaded: {filename}")
     except Exception as e:
         messagebox.showerror("Error", f"Failed to download: {e}")
+
+def download_using_selenium(url):
+    # Using Selenium for more complex interactions
+    try:
+        edge_options = Options()
+        edge_options.use_chromium = True  # This ensures that the Edge browser is used in Chromium mode
+        edge_options.add_experimental_option('detach', True)
+        driver = webdriver.Edge(service=EdgeService(), options=edge_options)
+        driver.get(url)
+        
+        # Adjust the below line according to the actual download button's identifier
+        download_button = driver.find_element(By.XPATH, '//*[contains(text(), "Download")]')
+        download_button.click()
+        
+        messagebox.showinfo("Success", "Download started in the browser.")
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to initiate download: {e}")
 
 def on_button_click():
     url = url_entry.get()
     if url:
-        download_url(url)
+        download_using_selenium(url)
     else:
         messagebox.showwarning("Input Error", "Please enter a URL.")
 
